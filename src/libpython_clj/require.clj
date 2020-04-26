@@ -2,18 +2,22 @@
   (:refer-clojure :exclude [fn? doc])
   (:require [libpython-clj.python :as py]
             [libpython-clj.metadata :as pymeta]
-            [clojure.datafy :refer [datafy nav]]
+            [libpython-clj.datafy :refer [datafy nav]]
             ;;Binds datafy/nav to python objects
             [libpython-clj.metadata :as metadata]
             [clojure.tools.logging :as log]
             [libpython-clj.python.protocols :as py-proto]
-            [clojure.core.protocols :as clj-proto])
+            [libpython-clj.protocol :as clj-proto])
   (:import [libpython_clj.python.protocols PPyObject PBridgeToJVM]))
 
 ;; for hot reloading multimethod in development
 (ns-unmap 'libpython-clj.require 'intern-ns-class)
 (ns-unmap *ns* 'pydafy)
 
+
+(defn boolean?
+  [x]
+  (instance? Boolean x))
 
 (defn- parse-flags
   "FSM style parser for flags.  Designed to support both
@@ -124,12 +128,12 @@
           (throw (Exception. (str "Cannot have periods in module/class"
                                   "name. Please :alias "
                                   import-name
-                                  " to something without periods."))))        
+                                  " to something without periods."))))
         (intern
          (symbol (str *ns*))
          (symbol import-name)
          pyobj)))
-    
+
     (when (or (not existing-py-ns?) reload?)
       (pymeta/apply-static-metadata-to-namespace! module-name (datafy pyobj)
                                                   :no-arglists? no-arglists?))
@@ -150,7 +154,7 @@
      (let [base (first req)
            reqs (rest req)]
        (map (partial req-transform base) reqs))))
-  ([prefix req] 
+  ([prefix req]
    (cond
      (and  (symbol? req)
            (clojure.string/includes? (name req) ".") )
@@ -183,7 +187,7 @@
    (require-python '[math :as maaaath])
 
    (maaaath/sin 1.0) ;;=> 0.8414709848078965
-  
+
    (require-python 'math 'csv)
    (require-python '[math :as pymath] 'csv))
    (require-python '[math :as pymath] '[csv :as py-csv])
@@ -252,7 +256,7 @@
 
    (require-python '(foo [bar :as baz :refer [qux]] buster))
    (require-python '[foo.bar :as baz :refer [qux]] 'foo.buster))
-  
+
    ## For library developers ##
 
    If you want to intern all symbols to your current namespace,
@@ -270,7 +274,7 @@
      (list? req) ;; prefix list
      (let [prefix-lists (req-transform req)]
        (doseq [req prefix-lists] (require-python req)))
-     (symbol? req) 
+     (symbol? req)
      (require-python (vector req))
      (vector? req)
      (do-require-python req)
@@ -320,7 +324,7 @@
 
 (defmulti pynav
   "Nav data from a Python object.
-  
+
      Extend this method to nav a custom Python object into Clojure data.
      Extend pydafy if you would like to datafy a Python object.
 
@@ -360,7 +364,7 @@
   (let [res (pydafy item)
         m   (meta res)]
     (try
-      (with-meta 
+      (with-meta
         res
         (merge
          {'clj-proto/nav pynav}
@@ -396,4 +400,3 @@
 
 
 (pydatafy PPyObject PBridgeToJVM)
-

@@ -917,8 +917,9 @@ Object's refcount is bad.  Crash is imminent"
           (hasNext [obj-iter]
             (not (nil? @cur-item-store)))
           (next [obj-iter]
-            (-> (swap-vals! cur-item-store next-fn)
-                ffirst))
+            (dosync (let [old @cur-item-store]
+                      (swap! cur-item-store next-fn)
+                      (first old))))
           (current [obj-iter]
             (first @cur-item-store)))))))
 
